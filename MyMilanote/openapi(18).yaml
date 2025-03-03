@@ -1,0 +1,672 @@
+openapi: 3.0.3
+info:
+  title: GraphNote - OpenAPI 3.0
+  description: >-
+    Проект для создания графического описания творческих идей при помощи диаграмм и стрелочек
+    
+    
+    Ссылки:
+
+    - [Github Project Page](https://github.com/rkolyan/GraphNote)
+    
+  contact:
+    email: blendervik@gmail.com
+  version: 1.0alpha
+servers:
+  - url: http://localhost:10000
+    description: Обычный http1.1 сервер
+  - url: https://localhost:10001
+    description: https/http2 сервер
+  - url: https://localhost:10002
+    description: http3 сервер
+tags:
+  - name: user
+    description: Действия по управлению пользователем (регистрация, авторизация, управление профилем)
+  - name: projects
+    description: Действия по управлению проектами
+paths:
+  /user/registration:
+    post:
+      tags:
+        - user
+      summary: Регистрация через почту и пароль
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserData'
+      responses:
+        '200':
+          description: Успешная регистрация, осталось 
+        '400':
+          description: Некорректный запрос
+        '403':
+          description: Некорректные почта, логин или пароль
+        '409':
+          description: Такой логин или почта уже заняты
+  /user/registration/{RegistrationKey}:
+    get:
+      tags:
+        - user
+      summary: Подтверждение регистрации
+      parameters:
+        - name: RegistrationKey
+          in: path
+          required: true
+          description: ID пользователя, необходимый для подтверждения аккаунта
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешная регистрация
+        '400':
+          description: Некорректный запрос
+        '404':
+          description: Такого ключа не существует
+          
+  /user/login:
+    get:
+      tags:
+        - user
+      summary: Вход в аккаунт
+      responses:
+        '200':
+          description: Вход подтверждён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Неверный логин или пароль
+      security:
+        - BasicAuth: []
+    delete:
+      tags:
+        - user
+      summary: Удаление токенов доступа, выход из аккаунта
+      responses:
+        '200':
+          description: Выход прошёл успешно
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Аккаунт не авторизован
+      security:
+        - JWTAuth: []
+
+  /user/auth:
+    get:
+      tags:
+        - user
+      summary: Обновление токенов
+      responses:
+        '200':
+          description: Аккаунт подтверждён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Подтверждение аккаунта не удалось
+      security:
+        - JWTAuth: []
+
+  /user/data:
+    get:
+      tags:
+        - user
+      summary: Получение пользовательской информации (никнейма, почты)
+      responses:
+        '200':
+          description: Данные о пользователе успешно получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserData'#TODO: Обнови в ER диаграмме
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Аккаунт не авторизован
+      security:
+        - JWTAuth: []
+    put:
+      tags:
+        - user
+      summary: Изменение никнейм/пароля
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserData'
+      responses:
+        '200':
+          description: никнейм/пароль успешно изменены
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Аккаунт не авторизован
+      security:
+        - JWTAuth: []
+
+  /projects:
+    get:
+      tags:
+        - projects
+      summary: Получение списка проектов
+      parameters:
+        - name: count
+          in: query
+          description: Кол-во возвращаемых записей
+          required: false
+          schema:
+            type: integer
+        - name: position
+          in: query
+          description: Номер последней полученной записи
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список проектов удалось вернуть
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+        '400':
+          description: Некорректные запрос
+        '401':
+          description: Пользователь неавторизован
+      security:
+        - JWTAuth: []
+    post:
+      tags:
+        - projects
+      summary: Создание нового проекта
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+      responses:
+        '200':
+          description: Проект создан успешно
+        '400':
+          description: Некорректные запрос
+        '401':
+          description: Пользователь неавторизован
+      security:
+        - JWTAuth: []
+          
+  /projects/{ProjectID}:
+    delete:
+      tags:
+        - projects
+      summary: Удаление проекта
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID удаляемого проекта
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Проект успешно удален
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого проекта не существует
+      security:
+        - JWTAuth: []
+          
+  /projects/{ProjectID}/metadata:
+    get:
+      tags:
+        - projects
+      summary: Получение метаданных проекта (имя, фотка, дата последнего изменения)
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID проекта
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Метаданные проекта успешно возвращены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMetadata'
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого проекта не существует
+      security:
+        - JWTAuth: []
+    put:
+      tags:
+        - projects
+      summary: Изменение метаданных проекта (переименование, обновление даты сохранения)
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID проекта
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectMetadata'
+      responses:
+        '200':
+          description: Метаданные проекта успешно обновлены
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого проекта не существует
+      security:
+        - JWTAuth: []
+    
+  /projects/{ProjectID}/objects:
+    get:
+      tags:
+        - objects
+      summary: Получение объектов проекта
+      description: Возвращается коллекция геометрических объектов, представленных в проекте (Диаграмм, изображений, текстов и тд)
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID проекта
+          required: true
+          schema:
+            type: string
+        - name: count
+          in: query
+          description: Кол-во возвращаемых записей
+          required: false
+          schema:
+            type: integer
+        - name: position
+          in: query
+          description: Номер последней полученной записи
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Объекты получены
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Object'
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого проекта не существует
+      security:
+        - JWTAuth: []
+    post:
+      tags:
+        - objects
+      summary: Создание нового объекта
+      description: Создаётся новый объект со свойствами по умолчанию
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID проекта
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Object'
+      responses:
+        '200':
+          description: Объект успешно создан
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого проекта не существует
+      security:
+        - JWTAuth: []
+
+  /projects/{ProjectID}/objects/{ObjectID}:
+    delete:
+      tags:
+        - objects
+      summary: Удаление заданного объекта
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID проекта
+          required: true
+          schema:
+            type: string
+        - name: ObjectID
+          in: path
+          description: ID объекта
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Объект успешно удалён
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого объекта не существует
+      security:
+        - JWTAuth: []
+  
+  /projects/{ProjectID}/objects/{ObjectID}/properties:
+    get:
+      tags:
+        - objects
+      summary: Удаление заданного объекта
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID проекта
+          required: true
+          schema:
+            type: string
+        - name: ObjectID
+          in: path
+          description: ID объекта
+          required: true
+          schema:
+            type: string
+        - name: count
+          in: query
+          description: Кол-во возвращаемых записей
+          required: false
+          schema:
+            type: integer
+        - name: position
+          in: query
+          description: Номер последней полученной записи
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Коллекция успешно возвращена
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/ObjectProperty'
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого объекта не существует
+      security:
+        - JWTAuth: []
+    patch:
+      tags:
+        - objects
+      summary: Обновление свойств объекта
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID проекта
+          required: true
+          schema:
+            type: string
+        - name: ObjectID
+          in: path
+          description: ID объекта
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ObjectProperty'
+      responses:
+        '200':
+          description: Данные свойства успешно изменены
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого объекта не существует
+        '413':
+          description: Слишком много свойств за раз обрабатываются
+      security:
+        - JWTAuth: []
+  
+  #/projects/{ProjectID}/objects/{ObjectID}/properties/{Property}:
+  #  put:
+  #    tags:
+  #      - objects
+  #    summary: Изменение свойства заданного объекта
+  #    parameters:
+  #      - name: ProjectID
+  #        in: path
+  #       description: ID проекта
+  #       required: true
+  #       schema:
+  #       type: string
+  #      - name: ObjectID
+  #        in: path
+  #        description: ID объекта
+  #        required: true
+  #        schema:
+  #          type: string
+  #      - name: Property
+  #        in: path
+  #        description: Название свойства
+  #        required: true
+  #        schema:
+  #          type: string
+  #    requestBody:
+  #      content:
+  #        application/json:
+  #          schema:
+  #            $ref: '#/components/schemas/ObjectProperty'
+  #    responses:
+  #      '200':
+  #        description: Объект успешно удалён
+  #      '400':
+  #        description: Некорректный ввод данных
+  #      '401':
+  #        description: Пользователь неавторизован
+  #      '404':
+  #        description: Такого объекта не существует
+  #    security:
+  #      - JWTAuth: []
+  
+  /projects/{ProjectID}/objects/{ObjectID}/connections:
+    post:
+      tags:
+        - objects
+      summary: Создание нового соединения
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID проекта
+          required: true
+          schema:
+            type: string
+        - name: ObjectID
+          in: path
+          description: ID объекта
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectConnection'
+      responses:
+        '200':
+          description: Элементы успешно соединены
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого объекта или проекта не существует
+      security:
+        - JWTAuth: []
+          
+  /projects/{ProjectID}/objects/{ObjectID}/connections/{ConnectionID}:
+    delete:
+      tags:
+        - objects
+      summary: Удаление соединения
+      parameters:
+        - name: ProjectID
+          in: path
+          description: ID проекта
+          required: true
+          schema:
+            type: string
+        - name: ObjectID
+          in: path
+          description: ID объекта
+          required: true
+          schema:
+            type: string
+        - name: ConnectionID
+          in: path
+          description: ID объекта
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Элементы успешно соединены
+        '400':
+          description: Некорректный запрос
+        '401':
+          description: Пользователь неавторизован
+        '404':
+          description: Такого объекта не существует
+      security:
+        - JWTAuth: []
+          
+components:
+  schemas:
+    UserData:
+      type: object
+      properties:
+        email:
+          type: string
+          example: 'blendervik@gmail.com'
+        name:
+          type: string
+          example: 'rkolyan'
+        password:
+          type: string
+          example: '12345678'
+
+    Tokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: 'aaaaaaaaaaa.bbbbbbbbbbb.cccccccccc'
+        refreshToken:
+          type: string
+          example: 'aaaaaaaaaaa.bbbbbbbbbbb.cccccccccc'
+
+    ProjectMetadata:
+      type: object
+      properties:
+        name:
+          type: string
+          example: rkolyan
+        updateDate:
+          type: string
+          example: '20-12-2023 16:55'
+    
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 29e62b13ead445559eb366750a4d6580b03f853a0f06fda1738e81c45d141136
+        metadata:
+          $ref: '#/components/schemas/ProjectMetadata'
+    
+    ObjectProperty:
+      type: object
+      properties:
+        name:
+          type: string
+          example: 'border-color'
+        value:
+          type: string
+          example: '#000000'
+        
+    ObjectConnection:
+      type: object
+      properties:
+        type:
+          type: number
+          example: 0
+        secondObjectID:
+          type: string
+        additionObjectID:
+          type: string
+          description: Параметр для указания объекта стрелочки
+    
+    Object:
+      type: object
+      properties:
+        objectID:
+          type: integer
+          example: 23
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectProperty'
+        connections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectConnection'
+
+  securitySchemes:
+    JWTAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT    # optional, arbitrary value for documentation purposes
+    BasicAuth:
+      type: http
+      scheme: Basic
