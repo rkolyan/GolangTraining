@@ -1,0 +1,17 @@
+//Информация о том, что хранится в .blend файле
+
+
+//Информация о UVMapping
+struct UvMapVert {
+	UvMapVert *next;
+	unsigned int face_index;
+	unsigned short loop_of_face_index;
+	bool separate;
+}
+
+struct UvVertMap {
+	UvMapVert **vert;
+	UvMapVert *buf;
+};
+
+
